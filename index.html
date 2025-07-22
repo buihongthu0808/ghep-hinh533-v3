@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bé Ghép Hình Thông Minh</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Itim&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        :root {
+            /* --- Chủ đề Nông trại --- */
+            --font-family: 'Itim', cursive;
+            --sky-top-color: #87CEEB;
+            --sky-bottom-color: #B0E0E6;
+            --grass-color: #8BC34A;
+            --fence-color: #A0522D;
+            --grid-bg: rgba(255, 255, 255, 0.6);
+            --grid-border: #D2B48C;
+            --title-color: #D2691E;
+            --text-color: #556B2F;
+            
+            --piece-color: #A0522D; /* Màu nâu cho tất cả mảnh ghép */
+            --drop-zone-color: #D3D3D3; /* Màu xám cho tất cả vùng thả */
+
+            --highlight-color: #FFFACD;
+            --highlight-glow: 0 0 15px 5px rgba(255, 250, 205, 0.8);
+            --win-overlay-bg: rgba(255, 255, 255, 0.85);
+            --win-text-color: #4CAF50;
+            --win-button-bg: #FF9800;
+            --win-button-hover-bg: #F57C00;
+
+            --cell-size: min(2.8vw, 4.5vh);
+            --grid1-cols: 17;
+            --grid1-rows: 5;
+            --grid2-cols: 17;
+            --grid2-rows: 8;
+            --gap: var(--cell-size);
+        }
+
+        body {
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            touch-action: none;
+            overflow: hidden;
+            background: linear-gradient(to bottom, var(--sky-top-color) 0%, var(--sky-bottom-color) 60%, var(--grass-color) 60%, var(--grass-color) 100%);
+            position: relative;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            padding: 0 7.5%;
+            box-sizing: border-box;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            color: var(--title-color);
+            text-transform: uppercase;
+            text-shadow: 3px 3px 0px #fff, 5px 5px 0px rgba(0,0,0,0.15);
+            margin: 0;
+            text-align: center;
+        }
+
+        .instructions {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            color: var(--text-color);
+            margin: 0;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 5px 15px;
+            border-radius: 20px;
+            text-align: center;
+        }
+
+        .grid-container {
+            position: relative;
+            display: grid;
+            border: 2px solid var(--fence-color);
+            border-radius: 0;
+            background-color: var(--grid-bg);
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1), 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        #grid1-container {
+            grid-template-columns: repeat(var(--grid1-cols), var(--cell-size));
+            grid-template-rows: repeat(var(--grid1-rows), var(--cell-size));
+            margin-bottom: var(--gap);
+        }
+
+        #grid2-container {
+            grid-template-columns: repeat(var(--grid2-cols), var(--cell-size));
+            grid-template-rows: repeat(var(--grid2-rows), var(--cell-size));
+        }
+
+        .grid-cell {
+            border: 1px solid var(--grid-border);
+            box-sizing: border-box;
+        }
+
+        .puzzle-piece, .drop-zone {
+            position: absolute;
+            width: calc(3 * var(--cell-size));
+            height: calc(3 * var(--cell-size));
+            user-select: none;
+            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), left 0.3s ease, top 0.3s ease;
+        }
+        
+        .puzzle-piece { cursor: pointer; z-index: 10; }
+        .puzzle-piece.dragging { z-index: 1000; cursor: grabbing; transition: none; }
+        .puzzle-piece.placed { z-index: 1; pointer-events: none; }
+        .drop-zone { transition: background-color 0.2s, box-shadow 0.2s, opacity 0.3s; z-index: 5; }
+        .drop-zone.highlight .triangle-shape { fill: var(--highlight-color) !important; filter: drop-shadow(var(--highlight-glow)); }
+
+        .puzzle-piece.shake { animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake {
+          10%, 90% { transform: translate3d(-1px, 0, 0) rotate(var(--rotation)); }
+          20%, 80% { transform: translate3d(2px, 0, 0) rotate(var(--rotation)); }
+          30%, 50%, 70% { transform: translate3d(-4px, 0, 0) rotate(var(--rotation)); }
+          40%, 60% { transform: translate3d(4px, 0, 0) rotate(var(--rotation)); }
+        }
+
+        .puzzle-piece svg, .drop-zone svg { width: 100%; height: 100%; }
+        .triangle-shape { fill-rule: evenodd; transition: fill 0.2s, filter 0.2s; }
+
+        #win-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--win-overlay-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.5s, visibility 0.5s; }
+        #win-screen.show { opacity: 1; visibility: visible; }
+        .win-message { font-size: clamp(2.5rem, 6vw, 5rem); color: var(--win-text-color); text-shadow: 2px 2px 4px rgba(0,0,0,0.2); text-align: center; transform: scale(0.5); transition: transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        #win-screen.show .win-message { transform: scale(1); }
+        .play-again-btn { font-family: var(--font-family); font-size: clamp(1.2rem, 3vw, 2rem); padding: 15px 30px; margin-top: 30px; border: none; border-radius: 50px; background-color: var(--win-button-bg); color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.2s; }
+        .play-again-btn:hover { background-color: var(--win-button-hover-bg); transform: translateY(-2px); }
+        #fireworks-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+
+        /* --- Hiệu ứng Nông trại --- */
+        .cloud {
+            position: absolute;
+            background: #f1faee;
+            border-radius: 100px;
+            filter: blur(1px);
+            opacity: 0.9;
+            animation: move-clouds linear infinite;
+        }
+        .cloud:before, .cloud:after {
+            content: '';
+            position: absolute;
+            background: #f1faee;
+            border-radius: 100px;
+        }
+        .cloud.x1 { top: 12%; left: -200px; width: 150px; height: 50px; animation-duration: 40s; }
+        .cloud.x1:before { width: 70px; height: 70px; top: -30px; left: 30px; }
+        .cloud.x1:after { width: 90px; height: 90px; top: -45px; right: 20px; }
+
+        .cloud.x2 { top: 28%; left: -250px; width: 200px; height: 60px; animation-duration: 28s; animation-delay: -8s; }
+        .cloud.x2:before { width: 90px; height: 90px; top: -40px; left: 50px; }
+        .cloud.x2:after { width: 110px; height: 110px; top: -55px; right: 40px; }
+
+        .cloud.x3 { top: 18%; left: -150px; width: 120px; height: 40px; animation-duration: 50s; animation-delay: -18s; }
+        .cloud.x3:before { width: 60px; height: 60px; top: -25px; left: 30px; }
+        .cloud.x3:after { width: 70px; height: 70px; top: -35px; right: 25px; }
+
+        @keyframes move-clouds { 0% { transform: translateX(0); } 100% { transform: translateX(calc(100vw + 300px)); } }
+        
+        .windmill {
+            position: absolute;
+            bottom: 40%;
+            left: 10%;
+            width: 30px;
+            height: 100px;
+            z-index: 5;
+        }
+        .windmill-tower {
+            width: 100%;
+            height: 100%;
+            background: #b97a57;
+            clip-path: polygon(20% 0, 80% 0, 100% 100%, 0% 100%);
+        }
+        .windmill-roof {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 20px;
+            background: #d62828;
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+        .blades {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            width: 10px;
+            height: 10px;
+            transform-origin: center;
+            animation: rotate-blades 10s linear infinite;
+        }
+        .blade {
+            position: absolute;
+            width: 15px;
+            height: 50px;
+            background: #f1faee;
+            border: 1px solid #a8dadc;
+            border-radius: 5px;
+            transform-origin: center bottom;
+            left: 50%;
+            bottom: 50%;
+            margin-left: -7.5px;
+        }
+        .blade1 { transform: rotate(0deg); }
+        .blade2 { transform: rotate(90deg); }
+        .blade3 { transform: rotate(180deg); }
+        .blade4 { transform: rotate(270deg); }
+        @keyframes rotate-blades { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .tree {
+            position: absolute;
+            z-index: 4;
+        }
+        .tree-trunk {
+            width: 15px;
+            height: 40px;
+            background: #8B4513;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .tree-leaves {
+            width: 80px;
+            height: 80px;
+            background: #228B22;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        .tree1 { bottom: 41%; right: 10%; }
+        .tree2 { bottom: 42%; right: 18%; transform: scale(0.8); }
+
+        /* Thêm hoa */
+        .flower {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            z-index: 6;
+        }
+        .flower .petal {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            left: 50%;
+            top: 50%;
+            margin-left: -5px;
+            margin-top: -5px;
+            transform-origin: center;
+        }
+        .flower .center {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #FFD700;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+        }
+        .petal.p1 { transform: translateY(-8px); }
+        .petal.p2 { transform: rotate(60deg) translateY(-8px); }
+        .petal.p3 { transform: rotate(120deg) translateY(-8px); }
+        .petal.p4 { transform: rotate(180deg) translateY(-8px); }
+        .petal.p5 { transform: rotate(240deg) translateY(-8px); }
+        .petal.p6 { transform: rotate(300deg) translateY(-8px); }
+
+        .flower1 { bottom: 45%; left: 25%; }
+        .flower1 .petal { background: #FF69B4; }
+        
+        .flower2 { bottom: 42%; left: 35%; transform: scale(0.8); }
+        .flower2 .petal { background: #FFFFFF; }
+
+        .flower3 { bottom: 46%; right: 25%; transform: scale(0.9); }
+        .flower3 .petal { background: #FF69B4; }
+
+        .flower4 { bottom: 43%; left: 5%; transform: scale(0.7); }
+        .flower4 .petal { background: #FFFFFF; }
+
+        .flower5 { bottom: 41%; left: 18%; }
+        .flower5 .petal { background: #FFC0CB; }
+
+        .flower6 { bottom: 44%; right: 5%; transform: scale(0.85); }
+        .flower6 .petal { background: #FFFFFF; }
+
+        .flower7 { bottom: 42%; right: 30%; }
+        .flower7 .petal { background: #FFC0CB; }
+
+        .flower8 { bottom: 45%; right: 15%; transform: scale(0.75); }
+        .flower8 .petal { background: #FF69B4; }
+
+        .flower9 { bottom: 41%; left: 45%; transform: scale(0.9); }
+        .flower9 .petal { background: #FFFFFF; }
+
+    </style>
+</head>
+<body>
+
+    <div id="farm-animations">
+        <div class="cloud x1"></div>
+        <div class="cloud x2"></div>
+        <div class="cloud x3"></div>
+        <div class="windmill">
+            <div class="windmill-tower"></div>
+            <div class="windmill-roof"></div>
+            <div class="blades">
+                <div class="blade blade1"></div>
+                <div class="blade blade2"></div>
+                <div class="blade blade3"></div>
+                <div class="blade blade4"></div>
+            </div>
+        </div>
+        <div class="tree tree1">
+            <div class="tree-leaves"></div>
+            <div class="tree-trunk"></div>
+        </div>
+        <div class="tree tree2">
+            <div class="tree-leaves"></div>
+            <div class="tree-trunk"></div>
+        </div>
+        <!-- Thêm hoa vào HTML -->
+        <div class="flower flower1">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower2">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower3">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower4">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower5">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower6">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower7">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower8">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+        <div class="flower flower9">
+            <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
+            <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
+            <div class="center"></div>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <h1>BÉ GHÉP HÌNH THÔNG MINH</h1>
+        <p class="instructions">Bé hãy xoay và kéo thả 4 mảnh ghép để tạo thành một hình tam giác lớn như mẫu bên dưới nhé!</p>
+
+        <div id="grid1-container" class="grid-container"></div>
+        <div id="grid2-container" class="grid-container"></div>
+    </div>
+
+    <div id="win-screen">
+        <canvas id="fireworks-canvas"></canvas>
+        <div class="win-message">Xuất sắc! Con thật thông minh!</div>
+        <button class="play-again-btn">Chơi lại</button>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const config = {
+            grid1: { id: 'grid1-container', rows: 5, cols: 17 },
+            grid2: { id: 'grid2-container', rows: 8, cols: 17 },
+            pieces: [
+                { id: 1, startPos: { col: 1, row: 1 } },
+                { id: 2, startPos: { col: 5, row: 1 } },
+                { id: 3, startPos: { col: 9, row: 1 } },
+                { id: 4, startPos: { col: 13, row: 1 } }
+            ],
+            dropZones: [
+                { id: 1, pos: { col: 6, row: 1 }, rotation: 0 },
+                { id: 2, pos: { col: 6, row: 4 }, rotation: 0 },
+                { id: 3, pos: { col: 6, row: 4 }, rotation: 180 },
+                { id: 4, pos: { col: 9, row: 4 }, rotation: 0 }
+            ],
+            clickThreshold: { time: 250, distance: 5 }
+        };
+
+        // --- GAME STATE ---
+        const gameState = {
+            pieces: {}, dropZones: {}, activeDrag: null, soundReady: false, fireworksAnimationId: null,
+        };
+
+        // --- DOM ELEMENTS ---
+        const grid1Container = document.getElementById(config.grid1.id);
+        const grid2Container = document.getElementById(config.grid2.id);
+        const winScreen = document.getElementById('win-screen');
+        const playAgainBtn = document.querySelector('.play-again-btn');
+        const fireworksCanvas = document.getElementById('fireworks-canvas');
+        const ctx = fireworksCanvas.getContext('2d');
+        let pieceElements = {};
+        let dropZoneElements = {};
+        
+        // --- AUDIO ---
+        let correctSound, incorrectSound, winSound;
+        function setupSounds() {
+            correctSound = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.1 } }).toDestination();
+            incorrectSound = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 2, envelope: { attack: 0.001, decay: 0.4, sustain: 0.01, release: 1.4, attackCurve: 'exponential' } }).toDestination();
+            winSound = new Tone.PolySynth(Tone.Synth, { envelope: { attack: 0.02, decay: 0.1, sustain: 0.3, release: 1 } }).toDestination();
+        }
+        function playSound(type) {
+            if (!gameState.soundReady) return;
+            if (type === 'correct') correctSound.triggerAttackRelease("C5", "8n");
+            else if (type === 'incorrect') incorrectSound.triggerAttackRelease("C2", "8n");
+            else if (type === 'win') winSound.triggerAttackRelease(["C4", "E4", "G4", "C5"], "0.5s");
+        }
+        
+        // --- FIREWORKS ---
+        let particles = [];
+        function Particle(x, y, color) { this.x = x; this.y = y; this.color = color; this.size = Math.random() * 5 + 2; this.alpha = 1; const angle = Math.random() * Math.PI * 2; const speed = Math.random() * 5 + 1; this.vx = Math.cos(angle) * speed; this.vy = Math.sin(angle) * speed; }
+        Particle.prototype.update = function() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.02; };
+        Particle.prototype.draw = function() { ctx.globalAlpha = this.alpha; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fill(); };
+        function createFirework() { const x = Math.random() * fireworksCanvas.width; const y = Math.random() * fireworksCanvas.height; const colors = ['#2ECC71', '#3498DB', '#E74C3C', '#F1C40F', '#9B59B6']; const color = colors[Math.floor(Math.random() * colors.length)]; for (let i = 0; i < 30; i++) { particles.push(new Particle(x, y, color)); } }
+        function animateFireworks() { ctx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height); if (Math.random() < 0.05) createFirework(); for (let i = particles.length - 1; i >= 0; i--) { particles[i].update(); particles[i].draw(); if (particles[i].alpha <= 0) { particles.splice(i, 1); } } gameState.fireworksAnimationId = requestAnimationFrame(animateFireworks); }
+        function stopFireworks() { if(gameState.fireworksAnimationId) { cancelAnimationFrame(gameState.fireworksAnimationId); gameState.fireworksAnimationId = null; ctx.clearRect(0, 0, fireworksCanvas.width, fireworksCanvas.height); particles = []; } }
+
+        // --- GAME LOGIC ---
+        function initGameState() { config.pieces.forEach(p => { gameState.pieces[p.id] = { rotation: 0, currentRotation: 0, isPlaced: false, startPos: p.startPos }; }); config.dropZones.forEach(dz => { gameState.dropZones[dz.id] = { isFilled: false, requiredRotation: dz.rotation }; }); }
+        function createGrid(container, rows, cols) { const fragment = document.createDocumentFragment(); for (let i = 0; i < rows * cols; i++) { const cell = document.createElement('div'); cell.classList.add('grid-cell'); fragment.appendChild(cell); } container.innerHTML = ''; container.appendChild(fragment); }
+        function createTriangleSVG(color) { const svgNS = "http://www.w3.org/2000/svg"; const svg = document.createElementNS(svgNS, "svg"); svg.setAttribute("viewBox", "0 0 100 100"); const polygon = document.createElementNS(svgNS, "polygon"); polygon.setAttribute("points", "0,0 0,100 100,100"); polygon.setAttribute("fill", color); polygon.classList.add('triangle-shape'); svg.appendChild(polygon); return svg; }
+        
+        function renderPieces() { 
+            const fragment = document.createDocumentFragment(); 
+            config.pieces.forEach(p => { 
+                const pieceEl = document.createElement('div'); 
+                pieceEl.classList.add('puzzle-piece'); 
+                pieceEl.id = `piece-${p.id}`; 
+                pieceEl.dataset.id = p.id; 
+                pieceEl.style.left = `calc(${p.startPos.col} * var(--cell-size))`; 
+                pieceEl.style.top = `calc(${p.startPos.row} * var(--cell-size))`; 
+                pieceEl.style.transform = `rotate(0deg)`; 
+                pieceEl.appendChild(createTriangleSVG('var(--piece-color)')); 
+                pieceEl.addEventListener('pointerdown', handlePointerDown); 
+                fragment.appendChild(pieceEl); 
+                pieceElements[p.id] = pieceEl; 
+            }); 
+            grid1Container.append(fragment); 
+        }
+        
+        function renderDropZones() { 
+            const fragment = document.createDocumentFragment(); 
+            config.dropZones.forEach(dz => { 
+                const zoneEl = document.createElement('div'); 
+                zoneEl.classList.add('drop-zone'); 
+                zoneEl.id = `dropzone-${dz.id}`; 
+                zoneEl.dataset.id = dz.id; 
+                zoneEl.style.left = `calc(${dz.pos.col} * var(--cell-size))`; 
+                zoneEl.style.top = `calc(${dz.pos.row} * var(--cell-size))`; 
+                zoneEl.style.transform = `rotate(${dz.rotation}deg)`; 
+                zoneEl.style.opacity = '1'; 
+                const svg = createTriangleSVG('var(--drop-zone-color)'); 
+                svg.style.opacity = '0.7'; 
+                zoneEl.appendChild(svg); 
+                fragment.appendChild(zoneEl); 
+                dropZoneElements[dz.id] = zoneEl; 
+            }); 
+            grid2Container.append(fragment); 
+        }
+
+        function handlePointerDown(event) { if (event.button !== 0) return; const pieceEl = event.currentTarget; const pieceId = pieceEl.dataset.id; if (gameState.pieces[pieceId].isPlaced) return; if (!gameState.soundReady) { Tone.start(); setupSounds(); gameState.soundReady = true; } event.preventDefault(); gameState.activeDrag = { target: pieceEl, id: pieceId, time: Date.now(), startX: event.clientX, startY: event.clientY, offsetX: event.clientX - pieceEl.getBoundingClientRect().left, offsetY: event.clientY - pieceEl.getBoundingClientRect().top }; document.addEventListener('pointermove', handlePointerMove); document.addEventListener('pointerup', handlePointerUp, { once: true }); }
+        function handlePointerMove(event) { if (!gameState.activeDrag) return; const { target, time, startX, startY, offsetX, offsetY } = gameState.activeDrag; const distanceMoved = Math.hypot(event.clientX - startX, event.clientY - startY); if (distanceMoved > config.clickThreshold.distance || (Date.now() - time) > config.clickThreshold.time) { if (!target.classList.contains('dragging')) { target.classList.add('dragging'); document.body.appendChild(target); } target.style.left = `${event.clientX - offsetX}px`; target.style.top = `${event.clientY - offsetY}px`; checkHighlight(target); } }
+        function handlePointerUp(event) { if (!gameState.activeDrag) return; const { target, time, startX, startY } = gameState.activeDrag; const timeElapsed = Date.now() - time; const distanceMoved = Math.hypot(event.clientX - startX, event.clientY - startY); target.classList.remove('dragging'); document.removeEventListener('pointermove', handlePointerMove); if (timeElapsed < config.clickThreshold.time && distanceMoved < config.clickThreshold.distance) { rotatePiece(target); } else { dropPiece(target); } gameState.activeDrag = null; clearAllHighlights(); }
+        function rotatePiece(pieceEl) { const pieceId = pieceEl.dataset.id; const pieceState = gameState.pieces[pieceId]; pieceState.currentRotation += 90; pieceState.rotation = pieceState.currentRotation % 360; pieceEl.style.transform = `rotate(${pieceState.currentRotation}deg)`; }
+        
+        function dropPiece(pieceEl) {
+            const correctDropZoneEl = findCorrectDropZone(pieceEl);
+            if (correctDropZoneEl) {
+                const pieceId = pieceEl.dataset.id;
+                const pieceState = gameState.pieces[pieceId];
+                const dropZoneId = correctDropZoneEl.dataset.id;
+                const dropZoneState = gameState.dropZones[dropZoneId];
+                playSound('correct');
+                pieceState.isPlaced = true;
+                dropZoneState.isFilled = true;
+                pieceEl.classList.add('placed');
+                grid2Container.appendChild(pieceEl);
+                pieceEl.style.left = correctDropZoneEl.style.left;
+                pieceEl.style.top = correctDropZoneEl.style.top;
+                pieceEl.style.transform = `rotate(${dropZoneState.requiredRotation}deg)`; 
+                correctDropZoneEl.style.opacity = '0';
+                checkWin();
+            } else {
+                snapBack(pieceEl);
+            }
+        }
+        
+        function snapBack(pieceEl) { const pieceId = pieceEl.dataset.id; const pieceState = gameState.pieces[pieceId]; playSound('incorrect'); pieceEl.style.setProperty('--rotation', `${pieceState.currentRotation}deg`); pieceEl.classList.add('shake'); pieceEl.addEventListener('animationend', () => { pieceEl.classList.remove('shake'); grid1Container.appendChild(pieceEl); pieceEl.style.left = `calc(${pieceState.startPos.col} * var(--cell-size))`; pieceEl.style.top = `calc(${pieceState.startPos.row} * var(--cell-size))`; }, { once: true }); }
+        function clearAllHighlights() { for (const id in dropZoneElements) { dropZoneElements[id].classList.remove('highlight'); } }
+        
+        function checkHighlight(draggedPiece) {
+            clearAllHighlights();
+            const correctDropZone = findCorrectDropZone(draggedPiece);
+            if (correctDropZone) {
+                correctDropZone.classList.add('highlight');
+            }
+        }
+
+        function findCorrectDropZone(draggedPiece) {
+            const pieceRect = draggedPiece.getBoundingClientRect();
+            const pieceState = gameState.pieces[draggedPiece.dataset.id];
+            for (const id in dropZoneElements) {
+                if (gameState.dropZones[id].isFilled) continue;
+                const zone = dropZoneElements[id];
+                const zoneState = gameState.dropZones[id];
+                const zoneRect = zone.getBoundingClientRect();
+                const isColliding = !(pieceRect.right < zoneRect.left || pieceRect.left > zoneRect.right || pieceRect.bottom < zoneRect.top || pieceRect.top > zoneRect.bottom);
+                if (isColliding && pieceState.rotation === zoneState.requiredRotation) {
+                    return zone;
+                }
+            }
+            return null;
+        }
+
+        function checkWin() { const allPlaced = Object.values(gameState.pieces).every(p => p.isPlaced); if (allPlaced) { setTimeout(() => { winScreen.classList.add('show'); playSound('win'); fireworksCanvas.width = window.innerWidth; fireworksCanvas.height = window.innerHeight; animateFireworks(); }, 1000); } }
+        function resetGame() { winScreen.classList.remove('show'); stopFireworks(); Object.values(pieceElements).forEach(el => el.remove()); Object.values(dropZoneElements).forEach(el => el.remove()); pieceElements = {}; dropZoneElements = {}; initGameState(); renderPieces(); renderDropZones(); }
+
+        function main() {
+            createGrid(grid1Container, config.grid1.rows, config.grid1.cols);
+            createGrid(grid2Container, config.grid2.rows, config.grid2.cols);
+            initGameState();
+            renderPieces();
+            renderDropZones();
+            playAgainBtn.addEventListener('click', resetGame);
+            window.addEventListener('resize', () => { if (winScreen.classList.contains('show')) { fireworksCanvas.width = window.innerWidth; fireworksCanvas.height = window.innerHeight; } });
+        }
+
+        main();
+    </script>
+</body>
+</html>
