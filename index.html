@@ -142,12 +142,28 @@
           40%, 60% { transform: translate3d(4px, 0, 0) rotate(var(--rotation)) translateZ(0); }
         }
 
-        .puzzle-piece svg, .drop-zone svg { width: 100%; height: 100%; }
+        .puzzle-piece svg, .drop-zone svg { 
+            width: 100%; 
+            height: 100%; 
+            /* Sửa lỗi hiệu ứng xoay trên Android (lớp 2) */
+            transform: translateZ(0);
+        }
         .triangle-shape { fill-rule: evenodd; transition: fill 0.2s, filter 0.2s; }
 
         #win-screen { position: fixed; top: 0; left: 0; width: 100%; height: var(--app-height, 100vh); background-color: var(--win-overlay-bg); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 2000; opacity: 0; visibility: hidden; transition: opacity 0.5s, visibility 0.5s; }
         #win-screen.show { opacity: 1; visibility: visible; }
-        .win-message { font-size: clamp(2.5rem, 6vw, 5rem); color: var(--win-text-color); text-shadow: 2px 2px 4px rgba(0,0,0,0.2); text-align: center; transform: scale(0.5); transition: transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
+        .win-message { 
+            font-size: clamp(2.5rem, 6vw, 5rem); 
+            color: var(--win-text-color); 
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2); 
+            text-align: center; 
+            transform: scale(0.5); 
+            transition: transform 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); 
+            /* Sửa lỗi màn hình kết thúc trên Android */
+            padding: 0 20px;
+            box-sizing: border-box;
+            max-width: 95%;
+        }
         #win-screen.show .win-message { transform: scale(1); }
         .play-again-btn { font-family: var(--font-family); font-size: clamp(1.2rem, 3vw, 2rem); padding: 15px 30px; margin-top: 30px; border: none; border-radius: 50px; background-color: var(--win-button-bg); color: white; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: background-color 0.3s, transform 0.2s; }
         .play-again-btn:hover { background-color: var(--win-button-hover-bg); transform: translateY(-2px); }
