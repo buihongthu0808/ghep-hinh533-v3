@@ -50,7 +50,8 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100%; /* Sửa lỗi màn hình kết thúc */
+            /* Sửa lỗi màn hình kết thúc: Dùng biến JS để đặt chiều cao */
+            height: var(--app-height, 100vh);
             box-sizing: border-box;
             touch-action: none;
             overflow: hidden;
@@ -65,7 +66,7 @@
             flex-direction: column;
             align-items: center;
             gap: 15px;
-            padding: 20px 7.5%; /* Thêm padding vào container */
+            padding: 20px 7.5%;
             box-sizing: border-box;
             z-index: 10;
         }
@@ -122,7 +123,7 @@
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), left 0.3s ease, top 0.3s ease;
             /* Sửa lỗi hiệu ứng xoay trên Android */
             backface-visibility: hidden;
-            transform-style: preserve-3d;
+            transform: translateZ(0); /* Buộc tăng tốc phần cứng */
         }
         
         .puzzle-piece { cursor: pointer; z-index: 10; }
@@ -514,7 +515,7 @@
         function handlePointerDown(event) { if (event.button !== 0) return; const pieceEl = event.currentTarget; const pieceId = pieceEl.dataset.id; if (gameState.pieces[pieceId].isPlaced) return; if (!gameState.soundReady) { Tone.start(); setupSounds(); gameState.soundReady = true; } event.preventDefault(); gameState.activeDrag = { target: pieceEl, id: pieceId, time: Date.now(), startX: event.clientX, startY: event.clientY, offsetX: event.clientX - pieceEl.getBoundingClientRect().left, offsetY: event.clientY - pieceEl.getBoundingClientRect().top }; document.addEventListener('pointermove', handlePointerMove); document.addEventListener('pointerup', handlePointerUp, { once: true }); }
         function handlePointerMove(event) { if (!gameState.activeDrag) return; const { target, time, startX, startY, offsetX, offsetY } = gameState.activeDrag; const distanceMoved = Math.hypot(event.clientX - startX, event.clientY - startY); if (distanceMoved > config.clickThreshold.distance || (Date.now() - time) > config.clickThreshold.time) { if (!target.classList.contains('dragging')) { target.classList.add('dragging'); document.body.appendChild(target); } target.style.left = `${event.clientX - offsetX}px`; target.style.top = `${event.clientY - offsetY}px`; checkHighlight(target); } }
         function handlePointerUp(event) { if (!gameState.activeDrag) return; const { target, time, startX, startY } = gameState.activeDrag; const timeElapsed = Date.now() - time; const distanceMoved = Math.hypot(event.clientX - startX, event.clientY - startY); target.classList.remove('dragging'); document.removeEventListener('pointermove', handlePointerMove); if (timeElapsed < config.clickThreshold.time && distanceMoved < config.clickThreshold.distance) { rotatePiece(target); } else { dropPiece(target); } gameState.activeDrag = null; clearAllHighlights(); }
-        function rotatePiece(pieceEl) { const pieceId = pieceEl.dataset.id; const pieceState = gameState.pieces[pieceId]; pieceState.currentRotation += 90; pieceState.rotation = pieceState.currentRotation % 360; pieceEl.style.transform = `rotate(${pieceState.currentRotation}deg)`; }
+        function rotatePiece(pieceEl) { const pieceId = pieceEl.dataset.id; const pieceState = gameState.pieces[pieceId]; pieceState.currentRotation += 90; pieceState.rotation = pieceState.currentRotation % 360; pieceEl.style.transform = `rotate(${pieceState.currentRotation}deg) translateZ(0)`; }
         
         function dropPiece(pieceEl) {
             const correctDropZoneEl = findCorrectDropZone(pieceEl);
@@ -530,7 +531,7 @@
                 grid2Container.appendChild(pieceEl);
                 pieceEl.style.left = correctDropZoneEl.style.left;
                 pieceEl.style.top = correctDropZoneEl.style.top;
-                pieceEl.style.transform = `rotate(${dropZoneState.requiredRotation}deg)`; 
+                pieceEl.style.transform = `rotate(${dropZoneState.requiredRotation}deg) translateZ(0)`; 
                 correctDropZoneEl.style.opacity = '0';
                 checkWin();
             } else {
@@ -568,14 +569,27 @@
         function checkWin() { const allPlaced = Object.values(gameState.pieces).every(p => p.isPlaced); if (allPlaced) { setTimeout(() => { winScreen.classList.add('show'); playSound('win'); fireworksCanvas.width = window.innerWidth; fireworksCanvas.height = window.innerHeight; animateFireworks(); }, 1000); } }
         function resetGame() { winScreen.classList.remove('show'); stopFireworks(); Object.values(pieceElements).forEach(el => el.remove()); Object.values(dropZoneElements).forEach(el => el.remove()); pieceElements = {}; dropZoneElements = {}; initGameState(); renderPieces(); renderDropZones(); }
 
+        // Sửa lỗi màn hình kết thúc trên Android
+        function setAppHeight() {
+            const doc = document.documentElement;
+            doc.style.setProperty('--app-height', `${window.innerHeight}px`);
+        }
+
         function main() {
+            setAppHeight();
             createGrid(grid1Container, config.grid1.rows, config.grid1.cols);
             createGrid(grid2Container, config.grid2.rows, config.grid2.cols);
             initGameState();
             renderPieces();
             renderDropZones();
             playAgainBtn.addEventListener('click', resetGame);
-            window.addEventListener('resize', () => { if (winScreen.classList.contains('show')) { fireworksCanvas.width = window.innerWidth; fireworksCanvas.height = window.innerHeight; } });
+            window.addEventListener('resize', () => { 
+                setAppHeight();
+                if (winScreen.classList.contains('show')) { 
+                    fireworksCanvas.width = window.innerWidth; 
+                    fireworksCanvas.height = window.innerHeight; 
+                } 
+            });
         }
 
         main();
