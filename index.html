@@ -67,7 +67,7 @@
         }
 
         h1 {
-            font-size: clamp(2rem, 5vw, 3.5rem);
+            font-size: clamp(2.5rem, 7vw, 4rem);
             color: var(--title-color);
             text-transform: uppercase;
             text-shadow: 3px 3px 0px #fff, 5px 5px 0px rgba(0,0,0,0.15);
@@ -76,7 +76,7 @@
         }
 
         .instructions {
-            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-size: clamp(1.1rem, 3vw, 1.5rem);
             color: var(--text-color);
             margin: 0;
             background-color: rgba(255, 255, 255, 0.7);
@@ -249,7 +249,6 @@
         .tree1 { bottom: 41%; right: 10%; }
         .tree2 { bottom: 42%; right: 18%; transform: scale(0.8); }
 
-        /* Thêm hoa */
         .flower {
             position: absolute;
             width: 25px;
@@ -284,34 +283,41 @@
         .petal.p4 { transform: rotate(180deg) translateY(-8px); }
         .petal.p5 { transform: rotate(240deg) translateY(-8px); }
         .petal.p6 { transform: rotate(300deg) translateY(-8px); }
-
-        .flower1 { bottom: 45%; left: 25%; }
+        
+        /* Cập nhật vị trí hoa */
+        .flower1 { bottom: 15%; left: 5%; }
         .flower1 .petal { background: #FF69B4; }
         
-        .flower2 { bottom: 42%; left: 35%; transform: scale(0.8); }
+        .flower2 { bottom: 22%; left: 12%; transform: scale(0.8); }
         .flower2 .petal { background: #FFFFFF; }
 
-        .flower3 { bottom: 46%; right: 25%; transform: scale(0.9); }
+        .flower3 { bottom: 16%; right: 5%; transform: scale(0.9); }
         .flower3 .petal { background: #FF69B4; }
 
-        .flower4 { bottom: 43%; left: 5%; transform: scale(0.7); }
+        .flower4 { bottom: 23%; left: 2%; transform: scale(0.7); }
         .flower4 .petal { background: #FFFFFF; }
 
-        .flower5 { bottom: 41%; left: 18%; }
+        .flower5 { bottom: 10%; left: 15%; }
         .flower5 .petal { background: #FFC0CB; }
 
-        .flower6 { bottom: 44%; right: 5%; transform: scale(0.85); }
+        .flower6 { bottom: 24%; right: 2%; transform: scale(0.85); }
         .flower6 .petal { background: #FFFFFF; }
 
-        .flower7 { bottom: 42%; right: 30%; }
+        .flower7 { bottom: 22%; right: 12%; }
         .flower7 .petal { background: #FFC0CB; }
 
-        .flower8 { bottom: 45%; right: 15%; transform: scale(0.75); }
+        .flower8 { bottom: 15%; right: 15%; transform: scale(0.75); }
         .flower8 .petal { background: #FF69B4; }
 
-        .flower9 { bottom: 41%; left: 45%; transform: scale(0.9); }
+        .flower9 { bottom: 10%; right: 20%; transform: scale(0.9); }
         .flower9 .petal { background: #FFFFFF; }
 
+        /* Cập nhật kích thước cho điện thoại */
+        @media (max-width: 768px) {
+            :root {
+                --cell-size: 5.5vw;
+            }
+        }
     </style>
 </head>
 <body>
@@ -338,7 +344,6 @@
             <div class="tree-leaves"></div>
             <div class="tree-trunk"></div>
         </div>
-        <!-- Thêm hoa vào HTML -->
         <div class="flower flower1">
             <div class="petal p1"></div><div class="petal p2"></div><div class="petal p3"></div>
             <div class="petal p4"></div><div class="petal p5"></div><div class="petal p6"></div>
