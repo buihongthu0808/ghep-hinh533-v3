@@ -39,14 +39,18 @@
             --gap: var(--cell-size);
         }
 
+        /* Sửa lỗi hiển thị trên Android */
+        html {
+            height: 100%;
+        }
+
         body {
             font-family: var(--font-family);
             margin: 0;
-            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            height: 100%; /* Sửa lỗi màn hình kết thúc */
             box-sizing: border-box;
             touch-action: none;
             overflow: hidden;
@@ -61,7 +65,7 @@
             flex-direction: column;
             align-items: center;
             gap: 15px;
-            padding: 0 7.5%;
+            padding: 20px 7.5%; /* Thêm padding vào container */
             box-sizing: border-box;
             z-index: 10;
         }
@@ -116,6 +120,9 @@
             height: calc(3 * var(--cell-size));
             user-select: none;
             transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), left 0.3s ease, top 0.3s ease;
+            /* Sửa lỗi hiệu ứng xoay trên Android */
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
         }
         
         .puzzle-piece { cursor: pointer; z-index: 10; }
@@ -284,7 +291,6 @@
         .petal.p5 { transform: rotate(240deg) translateY(-8px); }
         .petal.p6 { transform: rotate(300deg) translateY(-8px); }
         
-        /* Cập nhật vị trí hoa */
         .flower1 { bottom: 15%; left: 5%; }
         .flower1 .petal { background: #FF69B4; }
         
@@ -312,7 +318,6 @@
         .flower9 { bottom: 10%; right: 20%; transform: scale(0.9); }
         .flower9 .petal { background: #FFFFFF; }
 
-        /* Cập nhật kích thước cho điện thoại */
         @media (max-width: 768px) {
             :root {
                 --cell-size: 5.5vw;
