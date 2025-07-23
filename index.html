@@ -584,7 +584,19 @@
             return null;
         }
 
-        function checkWin() { const allPlaced = Object.values(gameState.pieces).every(p => p.isPlaced); if (allPlaced) { setTimeout(() => { winScreen.classList.add('show'); playSound('win'); fireworksCanvas.width = window.innerWidth; fireworksCanvas.height = window.innerHeight; animateFireworks(); }, 1000); } }
+        function checkWin() {
+            const allPlaced = Object.values(gameState.pieces).every(p => p.isPlaced);
+            if (allPlaced) {
+                setTimeout(() => {
+                    setAppHeight(); // Sửa lỗi: Luôn cập nhật chiều cao trước khi hiển thị
+                    winScreen.classList.add('show');
+                    playSound('win');
+                    fireworksCanvas.width = window.innerWidth;
+                    fireworksCanvas.height = window.innerHeight;
+                    animateFireworks();
+                }, 1000);
+            }
+        }
         function resetGame() { winScreen.classList.remove('show'); stopFireworks(); Object.values(pieceElements).forEach(el => el.remove()); Object.values(dropZoneElements).forEach(el => el.remove()); pieceElements = {}; dropZoneElements = {}; initGameState(); renderPieces(); renderDropZones(); }
 
         // Sửa lỗi màn hình kết thúc trên Android
